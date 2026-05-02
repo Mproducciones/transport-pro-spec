@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 cd /app
-echo "Running Prisma migrations..."
-npx prisma migrate deploy
+echo "Syncing database schema..."
+npx prisma db push --force-reset
 echo "Starting API..."
 exec node dist/index.js
