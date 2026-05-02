@@ -7,16 +7,18 @@
       "config": {
         "distDir": "dist"
       }
-    },
+    }
+  ],
+  "rewrites": [
     {
-      "src": "backend/package.json",
-      "use": "@vercel/node"
+      "source": "/api/:path*",
+      "destination": "https://transport-pro.onrender.com/:path*"
     }
   ],
   "routes": [
     {
-      "src": "/api/(.*)",
-      "dest": "/backend/src/index.ts"
+      "src": "/assets/(.*)",
+      "dest": "/frontend/assets/$1"
     },
     {
       "src": "/assets/(.*)",
