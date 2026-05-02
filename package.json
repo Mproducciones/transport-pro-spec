@@ -18,6 +18,7 @@
     "setup:dev": "cp .env.docker .env.example && echo '📝 Environment template ready'"
   },
   "devDependencies": {
+    "@remix-run/dev": "^2.17.4",
     "concurrently": "^9.1.2"
   },
   "dependencies": {

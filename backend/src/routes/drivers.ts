@@ -201,9 +201,12 @@ driversRouter.delete(
       }
 
       // Eliminar el usuario del portal si existe
-      if (driver.userId) {
+      const user = await tx.user.findFirst({
+        where: { driverId: driver.id },
+      });
+      if (user) {
         await tx.user.delete({
-          where: { id: driver.userId },
+          where: { id: user.id },
         });
       }
 
