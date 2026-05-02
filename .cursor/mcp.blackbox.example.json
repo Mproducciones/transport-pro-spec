@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "blackbox": {
+      "url": "https://cloud.blackbox.ai/api/mcp",
+      "headers": {
+        "Authorization": "Bearer REPLACE_WITH_YOUR_MCP_TOKEN"
+      }
+    }
+  }
+}

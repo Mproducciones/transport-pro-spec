@@ -1,0 +1,493 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  admin
+  cliente
+  conductor
+}
+
+enum VehicleStatus {
+  disponible
+  en_taller
+  asignado
+}
+
+enum ShipmentStatus {
+  pendiente
+  confirmado
+  recogido
+  en_transito
+  entregado
+  rechazado
+}
+
+/** Origen del cierre en rechazado (misma fila `status = rechazado`). */
+enum ShipmentRejectionPhase {
+  solicitud
+  pre_entrega
+  en_entrega
+}
+
+enum CargoType {
+  pallet
+  contenedor
+  granel
+  caja
+  otro
+}
+
+enum PaymentStatus {
+  pendiente
+  pagado
+  parcial
+}
+
+enum PaymentTerm {
+  upfront_full
+  upfront_partial
+  delivery
+}
+
+enum PaymentVerificationStatus {
+  pendiente
+  aprobado
+  rechazado
+}
+
+enum InvoiceStatus {
+  borrador
+  emitida
+  anulada
+}
+
+enum SubscriptionStatus {
+  inactive
+  trialing
+  active
+  past_due
+  cancelled
+}
+
+enum BillingCycle {
+  monthly
+  annual
+}
+
+enum CompanyAccountStatus {
+  activa
+  suspendida
+}
+
+enum DriverStatus {
+  activo
+  inactivo
+}
+
+enum AlertType {
+  mantenimiento
+  retraso
+  exceso_velocidad
+}
+
+model Tenant {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+
+  company              Company?
+  users                User[]
+  customers            Customer[]
+  drivers              Driver[]
+  vehicles             Vehicle[]
+  shipments            Shipment[]
+  invoices             Invoice[]
+  payments             Payment[]
+  expenses             Expense[]
+  tariffs              TariffRule[]
+  alerts               Alert[]
+  subscription         Subscription?
+  shipmentAttachments ShipmentAttachment[]
+  supportMessages      SupportMessage[]
+  driverSettlements    DriverSettlement[]
+}
+
+model Company {
+  id        String @id @default(cuid())
+  tenantId  String @unique
+  tenant    Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  legalName String
+  taxId     String?
+  address   String?
+  phone     String?
+  pricingBaseFee       Decimal @default(0) @db.Decimal(14, 2)
+  pricingPerKg         Decimal @default(0) @db.Decimal(14, 4)
+  pricingPerM3         Decimal @default(0) @db.Decimal(14, 2)
+  pricingMinimumCharge Decimal @default(0) @db.Decimal(14, 2)
+  accountStatus CompanyAccountStatus @default(activa)
+  /** Porcentaje del monto del viaje (total facturable) atribuido al chofer en liquidaciones automáticas. */
+  driverCommissionPercent Decimal @default(40) @db.Decimal(5, 2)
+}
+
+model User {
+  id           String   @id @default(cuid())
+  tenantId     String
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  email        String
+  passwordHash String
+  role         Role
+  driverId     String?  @unique
+  driver       Driver?  @relation(fields: [driverId], references: [id])
+  customerId   String?  @unique
+  customer     Customer? @relation(fields: [customerId], references: [id])
+  createdAt    DateTime @default(now())
+
+  statusHistoryChanges ShipmentStatusHistory[]
+  paymentsRecorded     Payment[]
+  paymentsVerified     Payment[]            @relation("PaymentVerifiedBy")
+  expensesRecorded     Expense[]
+  approvedShipments    Shipment[]           @relation("ShipmentApprovedBy")
+  shipmentAttachmentsUploaded ShipmentAttachment[] @relation("AttachmentUploadedBy")
+  supportMessagesSent  SupportMessage[]     @relation("SupportMessageAuthor")
+  settlementsClosed    DriverSettlement[]   @relation("SettlementClosedBy")
+
+  @@unique([tenantId, email])
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name      String
+  email     String
+  taxId     String?
+  phone     String?
+  createdAt DateTime @default(now())
+
+  user      User?
+  shipments Shipment[]
+  invoices  Invoice[]
+  tariffs   TariffRule[]
+
+  @@unique([tenantId, email])
+  @@unique([tenantId, taxId])
+}
+
+model Driver {
+  id                String   @id @default(cuid())
+  tenantId          String
+  tenant            Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  fullName          String
+  /// URL pública (ej. almacenamiento) o fija de demo; opcional
+  avatarUrl         String?
+  taxId             String?
+  phone             String?
+  licenseNumber     String?
+  status            DriverStatus @default(activo)
+  assignedVehicleId String?  @unique
+  assignedVehicle   Vehicle? @relation(fields: [assignedVehicleId], references: [id])
+  createdAt         DateTime @default(now())
+
+  user      User?
+  shipments Shipment[]
+  supportMessages SupportMessage[]
+  settlements     DriverSettlement[]
+
+  @@unique([tenantId, taxId])
+}
+
+model Vehicle {
+  id        String        @id @default(cuid())
+  tenantId  String
+  tenant    Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  plate     String
+  kind      String?
+  status    VehicleStatus @default(disponible)
+  createdAt DateTime      @default(now())
+
+  assignedTo Driver?
+  shipments  Shipment[]
+
+  @@unique([tenantId, plate])
+}
+
+model Shipment {
+  id               String         @id @default(cuid())
+  tenantId         String
+  tenant           Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customerId       String
+  customer         Customer       @relation(fields: [customerId], references: [id])
+  driverId         String?
+  driver           Driver?        @relation(fields: [driverId], references: [id])
+  vehicleId        String?
+  vehicle          Vehicle?       @relation(fields: [vehicleId], references: [id])
+  origin           String
+  originLat        Decimal?       @db.Decimal(10, 7)
+  originLng        Decimal?       @db.Decimal(10, 7)
+  destination      String
+  destinationLat   Decimal?       @db.Decimal(10, 7)
+  destinationLng   Decimal?       @db.Decimal(10, 7)
+  lastLat          Decimal?       @db.Decimal(10, 7)
+  lastLng          Decimal?       @db.Decimal(10, 7)
+  lastReportedAt   DateTime?
+  cargoType        CargoType
+  cargoQuantity    Decimal?       @db.Decimal(12, 2)
+  cargoWeightKg    Decimal?       @db.Decimal(12, 2)
+  cargoVolumeM3    Decimal?       @db.Decimal(12, 2)
+  cargoDescription String?
+  amount           Decimal?       @db.Decimal(12, 2)
+  baseAmount       Decimal?       @db.Decimal(12, 2)
+  requiresHelper   Boolean        @default(false)
+  helperSurcharge  Decimal?       @db.Decimal(12, 2)
+  totalAmount      Decimal?       @db.Decimal(12, 2)
+  status           ShipmentStatus @default(pendiente)
+  /** Si `status = rechazado`: solicitud (admin), pre_entrega (retiro/pre-ruta: p. ej. no cabe en camión; sin marcar recogido), en_entrega (destino). */
+  rejectionPhase   ShipmentRejectionPhase?
+  paymentStatus    PaymentStatus  @default(pendiente)
+  paymentTerm      PaymentTerm    @default(delivery)
+  upfrontPercent   Decimal?       @db.Decimal(5, 2)
+  upfrontAmount    Decimal?       @db.Decimal(14, 2)
+  approvedById     String?
+  approvedBy       User?          @relation("ShipmentApprovedBy", fields: [approvedById], references: [id])
+  approvedAt       DateTime?
+  decisionNote     String?
+  deliveredToName  String?
+  deliveredToId    String?
+  deliveredAt      DateTime?
+  pickedUpAt       DateTime?
+  enTransitoAt     DateTime?
+  deliveryEvidence String?
+  deliveredLat     Decimal?       @db.Decimal(10, 7)
+  deliveredLng     Decimal?       @db.Decimal(10, 7)
+  scheduledPickup  DateTime
+  scheduledDelivery DateTime
+  pickupAddress    String?
+  deliveryAddress  String?
+  pickupWindowStart DateTime?
+  pickupWindowEnd  DateTime?
+  deliveryWindowStart DateTime?
+  deliveryWindowEnd DateTime?
+  pickupNotes      String?
+  deliveryNotes    String?
+  /** Orden sugerido de retiro (1 = primero). Usado con modo LIFO en ruta del chofer. */
+  loadSequence     Int?
+  /** Notas de acceso en descarga (muelle, horario, restricción). */
+  unloadAccess     String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  statusHistory ShipmentStatusHistory[]
+  invoiceLines  InvoiceLine[]
+  payments      Payment[]
+  expenses      Expense[]
+  alerts        Alert[]
+  attachments   ShipmentAttachment[]
+  supportMessages SupportMessage[]
+}
+
+enum AttachmentKind {
+  delivery_photo
+  delivery_signature
+}
+
+enum SettlementStatus {
+  borrador
+  cerrado
+}
+
+model ShipmentAttachment {
+  id          String         @id @default(cuid())
+  tenantId    String
+  tenant      Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  shipmentId  String
+  shipment    Shipment       @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  kind        AttachmentKind
+  fileName    String
+  mimeType    String
+  sizeBytes   Int
+  createdById String
+  createdBy   User           @relation("AttachmentUploadedBy", fields: [createdById], references: [id])
+  createdAt   DateTime       @default(now())
+
+  @@index([tenantId, shipmentId])
+}
+
+model SupportMessage {
+  id           String    @id @default(cuid())
+  tenantId     String
+  tenant       Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  driverId     String
+  driver       Driver    @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  shipmentId   String?
+  shipment     Shipment? @relation(fields: [shipmentId], references: [id], onDelete: SetNull)
+  authorRole   Role
+  authorUserId String
+  author       User      @relation("SupportMessageAuthor", fields: [authorUserId], references: [id])
+  body         String    @db.Text
+  createdAt    DateTime  @default(now())
+
+  @@index([tenantId, driverId, createdAt])
+}
+
+model DriverSettlement {
+  id                String           @id @default(cuid())
+  tenantId          String
+  tenant            Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  driverId          String
+  driver            Driver           @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  periodStart       DateTime
+  periodEnd         DateTime
+  entregasCount     Int
+  /** Suma de montos de viaje (totalAmount) usados como base. */
+  baseAmount        Decimal          @db.Decimal(14, 2)
+  commissionPercent Decimal          @db.Decimal(5, 2)
+  grossAmount       Decimal          @db.Decimal(14, 2)
+  bonusAmount       Decimal          @default(0) @db.Decimal(14, 2)
+  deductionAmount   Decimal          @default(0) @db.Decimal(14, 2)
+  netAmount         Decimal          @db.Decimal(14, 2)
+  notes             String?
+  status            SettlementStatus @default(borrador)
+  closedAt          DateTime?
+  closedById        String?
+  closedBy          User?            @relation("SettlementClosedBy", fields: [closedById], references: [id])
+  createdAt         DateTime         @default(now())
+
+  @@index([tenantId, driverId, createdAt])
+}
+
+model ShipmentStatusHistory {
+  id          String          @id @default(cuid())
+  shipmentId  String
+  shipment    Shipment        @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  fromStatus  ShipmentStatus?
+  toStatus    ShipmentStatus
+  note        String?
+  changedById String
+  changedBy   User            @relation(fields: [changedById], references: [id])
+  createdAt   DateTime        @default(now())
+}
+
+model Invoice {
+  id         String        @id @default(cuid())
+  tenantId   String
+  tenant     Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customerId String
+  customer   Customer      @relation(fields: [customerId], references: [id])
+  number     String
+  issueDate  DateTime      @default(now())
+  dueDate    DateTime?
+  status     InvoiceStatus @default(emitida)
+  subtotal   Decimal       @db.Decimal(14, 2)
+  taxRate    Decimal       @default(0) @db.Decimal(5, 2)
+  taxAmount  Decimal       @default(0) @db.Decimal(14, 2)
+  total      Decimal       @db.Decimal(14, 2)
+  notes      String?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  lines    InvoiceLine[]
+  payments Payment[]
+
+  @@unique([tenantId, number])
+}
+
+model InvoiceLine {
+  id          String   @id @default(cuid())
+  invoiceId   String
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  description String
+  quantity    Decimal  @default(1) @db.Decimal(12, 2)
+  unitPrice   Decimal  @db.Decimal(14, 2)
+  lineTotal   Decimal  @db.Decimal(14, 2)
+  shipmentId  String?
+  shipment    Shipment? @relation(fields: [shipmentId], references: [id])
+}
+
+model Payment {
+  id           String   @id @default(cuid())
+  tenantId     String
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invoiceId    String?
+  invoice      Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  shipmentId   String?
+  shipment     Shipment? @relation(fields: [shipmentId], references: [id], onDelete: SetNull)
+  amount       Decimal  @db.Decimal(14, 2)
+  method       String
+  reference    String?
+  verificationStatus PaymentVerificationStatus @default(aprobado)
+  verificationNote   String?
+  verifiedById String?
+  verifiedBy   User? @relation("PaymentVerifiedBy", fields: [verifiedById], references: [id])
+  verifiedAt   DateTime?
+  paidAt       DateTime @default(now())
+  recordedById String
+  recordedBy   User     @relation(fields: [recordedById], references: [id])
+  createdAt    DateTime @default(now())
+}
+
+model Subscription {
+  id               String             @id @default(cuid())
+  tenantId         String             @unique
+  tenant           Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  plan             String             @default("pro")
+  billingCycle     BillingCycle       @default(monthly)
+  billingAmount    Decimal            @default(49) @db.Decimal(14, 2)
+  status           SubscriptionStatus @default(trialing)
+  mpPreapprovalId  String?
+  mpPayerId        String?
+  startedAt        DateTime           @default(now())
+  currentPeriodEnd DateTime?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+}
+
+model TariffRule {
+  id              String    @id @default(cuid())
+  tenantId        String
+  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customerId      String?
+  customer        Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  origin          String
+  destination     String
+  cargoType       CargoType?
+  baseAmount      Decimal   @db.Decimal(14, 2)
+  helperSurcharge Decimal   @default(0) @db.Decimal(14, 2)
+  active          Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([tenantId, customerId, origin, destination, cargoType, active])
+}
+
+model Expense {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  shipmentId  String
+  shipment    Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  category    String
+  amount      Decimal  @db.Decimal(14, 2)
+  note        String?
+  recordedAt  DateTime @default(now())
+  recordedById String
+  recordedBy  User     @relation(fields: [recordedById], references: [id])
+  createdAt   DateTime @default(now())
+}
+
+model Alert {
+  id          String    @id @default(cuid())
+  tenantId    String
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  shipmentId  String?
+  shipment    Shipment? @relation(fields: [shipmentId], references: [id], onDelete: SetNull)
+  type        AlertType
+  message     String
+  createdAt   DateTime  @default(now())
+}

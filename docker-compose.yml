@@ -1,0 +1,78 @@
+# Stack local: PostgreSQL + API Express + frontend React (Nginx)
+# Uso: docker compose up --build
+# Web: http://localhost:8080  ·  API directa (opcional): http://localhost:4000
+
+# Redes aisladas para seguridad
+networks:
+  internal:
+    driver: bridge
+    internal: true  # Sin acceso a internet
+  frontend:
+    driver: bridge
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-transport}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}  # Requerido en .env
+      POSTGRES_DB: ${POSTGRES_DB:-transport_pro}
+    ports:
+      - "127.0.0.1:5432:5432"  # Solo localhost, no público
+    volumes:
+      - transport_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-transport} -d ${POSTGRES_DB:-transport_pro}"]
+      interval: 5s
+      timeout: 5s
+      retries: 8
+    networks:
+      - internal
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:4000:4000"  # Solo localhost
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-transport}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-transport_pro}?schema=public
+      JWT_SECRET: ${JWT_SECRET}  # Requerido en .env (64+ chars)
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}  # Requerido en .env (64+ chars)
+      OWNER_API_KEY: ${OWNER_API_KEY}  # Requerido en .env (64+ chars)
+      PORT: "4000"
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:8080}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080,http://127.0.0.1:8080}
+      TRUST_PROXY_HOPS: "1"
+      MP_ENABLED: "false"
+      UPLOAD_DIR: /app/uploads
+      # Configuración de seguridad
+      API_RATE_LIMIT: ${API_RATE_LIMIT:-100}
+      MUTATION_RATE_LIMIT: ${MUTATION_RATE_LIMIT:-50}
+      AUTH_RATE_LIMIT: ${AUTH_RATE_LIMIT:-30}
+      HSTS: "true"
+      CROSS_ORIGIN_COOKIES: "false"
+    volumes:
+      - api_uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - internal
+      - frontend
+
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+    networks:
+      - frontend
+
+volumes:
+  transport_pg:
+  api_uploads:

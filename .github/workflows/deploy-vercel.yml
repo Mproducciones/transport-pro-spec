@@ -1,0 +1,39 @@
+# Despliegue del frontend a Vercel (producción).
+# Requiere secretos en el repo: VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID, VITE_API_ORIGIN.
+#
+# Si aún no los configuraste, este workflow fallará: usá "workflow_dispatch" solo cuando estén listos,
+# o deshabilitá temporalmente el archivo en GitHub → Actions.
+name: Deploy frontend (Vercel)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+    paths:
+      - "frontend/**"
+      - ".github/workflows/deploy-vercel.yml"
+
+concurrency:
+  group: vercel-frontend-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Vercel production
+    runs-on: ubuntu-latest
+    env:
+      VITE_API_ORIGIN: ${{ secrets.VITE_API_ORIGIN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to Vercel
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          working-directory: frontend
+          vercel-args: "--prod"

@@ -1,0 +1,212 @@
+================================================================================
+Transport Pro — resumen para retomar mañana (chat / proyecto)
+Fecha referencia: abril 2026
+================================================================================
+
+--- ARRANQUE RÁPIDO (cuando enciendas la PC) ---
+1) PostgreSQL / Docker (lo que uses) → que esté corriendo.
+2) backend/.env → DATABASE_URL apuntando a tu base REAL (no placeholder tipo example.com).
+3) Terminal backend:
+   cd backend
+   npm run dev
+4) Terminal frontend:
+   cd frontend
+   npm run dev
+5) Limpiar solo viajes/facturas/pagos y mantener cuentas demo (slugs demo, andescargo, patagoniaruta):
+   cd backend
+   npm run wipe:demo-operational
+6) Datos demo multi-rol (después del wipe o en BD vacía):
+   cd backend
+   npm run seed:test-agents
+7) Simulación admin pasado/hoy/futuro (Chile): npm run seed:admin-simulation
+   Guía: docs/SIMULACION_EQUIPO_ADMIN.md
+8) Cuentas: ver docs/AGENT_TEAM.md (empresa.agente@demo.com, cliente.agente1@demo.com, etc.)
+
+--- PRUEBAS ÚTILES (API levantada) ---
+  cd backend
+  npm run test:unit
+  npm run verify:auth-roles
+  npm run smoke:critical        (opcional, flujo crítico)
+  npm run smoke:billing         (opcional, facturación/pagos)
+
+--- QUÉ QUEDÓ CONFIGURADO (no hace falta volver a pedirlo) ---
+• .cursor/rules/transport-pro-agent-team.mdc  → regla siempre activa: ciclo Manager,
+  full stack, personas; si pedís "pruebas" usa seed:test-agents + scripts + cuentas del doc.
+• AGENTS.md → puntero a esa regla y al equipo virtual.
+• docs/AGENT_TEAM.md → roles, ciclo, credenciales demo, flujos críticos.
+
+--- CAMBIOS IMPORTANTES EN PORTAL CLIENTE (UX) ---
+• Vista "Resumen" (antes Inicio): primero "Lo primero que necesitás ver", luego pedido
+  destacado y pagos, luego números, desglose, solicitar envío, índice "¿Buscás otra cosa?".
+• Móvil "Más": en sección Pedidos no repite En curso/Mapa/Historial (ya están en pestañas).
+• Mini checklist de comprobantes en Resumen: mismos datos que ClienteLayout (query
+  cliente-payments-alert), enlace directo a /cliente/pagos si hay rechazados o pendientes.
+• Reducción de redundancias en facturas/pagos/envíos (menos botones duplicados; un solo
+  "Ver comprobante" en lista de pagos, etc.).
+
+--- SI ALGO FALLA ---
+• seed:test-agents → revisar DATABASE_URL y que Postgres acepte conexiones.
+• verify:auth-roles → backend debe estar en el puerto esperado (ej. 4000).
+
+--- PRÓXIMOS PASOS OPCIONALES ---
+• Más pulido de copy o métricas en cliente.
+• E2E automatizado (hoy no hay suite en frontend).
+
+================================================================================
+ADMIN / ENVÍOS — CONTEXTO ACTIVO (abril 2026, sesiones recientes)
+================================================================================
+
+--- CÓMO RETOMAR EL CHAT CON LA IA ---
+• Abrí este archivo y decí: "seguimos con lo de PARA_MANANA_transport-pro.txt" o pegá la
+  sección "Prompts que orientaron el trabajo" si el chat no tiene historial.
+• Reglas del repo: .cursor/rules/transport-pro-agent-team.mdc + AGENTS.md + docs/AGENT_TEAM.md.
+
+--- LÍNEA DE PRODUCTO (ENVÍOS ADMIN) ---
+• Dos familias mentales: solicitudes nuevas (cotizar / asignar / confirmar) vs en operación
+  (ejecución / cierre). UI: botones "Tipo de envíos" y "Consulta en tabla" (modales).
+• Rechazados: se gestionan EN ENVÍOS (no redirigir a Pagos por ?vista=rechazados ni
+  rechazos_entrega). Filtros: "Rechazo por admin o pre-ruta" (cotizar), "Rechazo en destino"
+  y "Rechazos y retrasos" (ejecución/cierre según FILTERS_BY_PROCESS). Pagos = comprobantes
+  y cobranza.
+• Se DESCARTÓ la franja "Vista dueño · un vistazo" (KPIs sticky + flota + bloque 48 h).
+• Se DESCARTÓ integrar el archivo gigante "Resumen vs Lista" estilo Claude; si se retoma,
+  fusionar sin traer "Marcar pagado" en envíos ni contradecir rechazados en Envíos.
+• Filtro extra: cobro_pendiente (pago pendiente o parcial, no rechazados) en ejecución/cierre.
+• Tabla: columna "Riesgo / situación" con badges; orden por urgencia (compareShipmentsByUrgency).
+• Detalle: bloque "Línea de tiempo (resumen)"; botón de confirmación al cliente = solo
+  texto "Confirmar servicio" (no "… al cliente").
+• Campana AdminShipmentAlertsBell + adminCommandIntents: enlaces a /admin/envios con
+  vista=rechazados o rechazos_entrega (no Pagos para eso).
+• DashboardPage: copy de KPI "Entregas vencidas" y bloque cartera alineados (rechazos en
+  Envíos; Pagos para comprobantes).
+
+--- ARCHIVOS CLAVE TOCADOS (última ola) ---
+• frontend/src/admin/pages/EnviosAdminPage.tsx — núcleo de filtros, modales, tabla, detalle.
+• frontend/src/admin/pages/DashboardPage.tsx — hints cartera / entregas vencidas.
+• frontend/src/admin/AdminShipmentAlertsBell.tsx — destinos de alertas.
+• frontend/src/admin/adminCommandIntents.ts — intents rechazados → envíos.
+• (histórico) MapaSeguimientoAdminPage.tsx — "Volver" con chevron, etc.
+
+--- PROMPTS QUE ORIENTARON EL TRABAJO (para recargar intención) ---
+1) Envíos: clasificar en 2 grupos — solicitudes nuevas (cotizando) vs envíos listos (operación).
+2) Si fueras dueño de camiones: qué ver en admin Envíos y cómo distribuirlo → se implementó
+   KPIs/riesgo/orden; luego se pidió dejar esa idea y volver rechazados a Envíos.
+3) "deja esta idea y los rechazados dejalos en envios" — quitar vista dueño + redirección
+   Pagos; mapDashboardVista + filtros + campana + intents.
+4) "actualiza para ver los cambios" — dev en raíz npm run dev; URLs admin/envios; refresh duro.
+5) "en confirmacion al cliente que el botón sea solo confirmar servicio".
+6) Referencia Claude (Resumen/Lista, comentario de archivo): gustaba el enfoque pero no
+   reemplazar todo el archivo; duda Claude Pro vs proyecto → explicado (Cursor/repo vs
+   Claude Pro web).
+
+--- PENDIENTES / IDEAS (no bloqueantes) ---
+• Revisar glosario del modal "Consulta en tabla" si algún texto quedó desalineado con
+  rechazados en Envíos.
+• Cualquier otro KPI en Inicio que aún diga "rechazos solo en Pagos" — grep rechaz|Pagos.
+
+================================================================================
+ACTUALIZACION 2026-04-29 (madrugada) — RESUMEN PARA RETOMAR
+================================================================================
+
+1) MINIMALISMO EN ADMIN (HECHO)
+- Navegacion priorizada:
+  - Sidebar/mobile enfocados en: Inicio, Clientes, Envios, Pagos, Configuracion.
+  - Clientes sube como acceso principal.
+- Dashboard reorganizado por pilares:
+  a) Pedidos y plazos
+  b) Cobros al dia
+  c) Analisis opcional (colapsable)
+- Se agrego bloque "Hoy y proximos 7 dias" para compromisos de entrega.
+
+2) CLIENTES COMO CENTRO DE CONTROL (HECHO)
+- `ClientesAdminPage` ahora muestra semaforo por cuenta:
+  - Requiere accion / Seguimiento / Al dia
+- Resumen por cliente con:
+  - pedidos abiertos
+  - pendientes de aprobar
+  - vencidos
+  - saldo estimado
+- Orden de tarjetas prioriza clientes con mayor urgencia.
+
+3) PERFIL CLIENTE (HECHO)
+- `ClientePerfilAdminContent` incorpora linea de tiempo unificada:
+  - pedidos
+  - facturas
+  - pagos
+- Objetivo: evitar seguimiento mental y por WhatsApp.
+
+4) SUGERENCIA CHOFER EN SOLICITUDES (HECHO)
+- Se mantuvo sugerencia por ruta/historial.
+- Se integro en combobox (sin panel separado de sugerencias).
+- Autoasignacion inicial solo si solicitud pendiente no trae chofer ni vehiculo.
+
+5) GOOGLE MAPS — CRITERIO DE NEGOCIO APLICADO (HECHO)
+- Admin y cliente:
+  - Maps abre en modo seguimiento/ubicacion (NO ruta origen->destino).
+  - Prioriza ultima posicion GPS del camion.
+- Conductor:
+  - mantiene modo navegacion por ruta (sin cambios).
+- Archivos clave:
+  - `frontend/src/admin/shipmentMapGeo.ts`
+  - `frontend/src/admin/AdminShipmentDetailFloat.tsx`
+  - `frontend/src/admin/pages/MapaSeguimientoAdminPage.tsx`
+  - `frontend/src/cliente/ClienteEnviosPage.tsx`
+
+6) BUILD / VALIDACION
+- Frontend build OK (`npm run build`).
+- Lints en archivos editados: sin errores.
+
+7) SI RETOMAS MANANA, ORDEN SUGERIDO
+- Paso 1: validar UX real con cuentas demo (admin + cliente + conductor).
+- Paso 2: ajustar textos finales de seguimiento vs navegacion si hiciera falta.
+- Paso 3 (opcional): definir alertas salientes (mail/push) para vencimientos y cobros.
+
+================================================================================
+Fin del resumen. Abrí este archivo mañana o pegalo en el chat para contexto.
+================================================================================
+
+================================================================================
+ACTUALIZACION 2026-04-28 (noche) — CONTINUAR DESDE AQUI
+================================================================================
+
+1) SOLICITUDES DESDE DASHBOARD
+- Se pidio que la ficha sea operativa (no solo lectura).
+- Estado actual:
+  - Se mantuvo click directo en listado (sin boton extra redundante).
+  - En `AdminShipmentDetailFloat.tsx`, cuando el envio esta `pendiente`, ahora permite:
+    a) asignar chofer + vehiculo
+    b) aprobar solicitud
+
+2) ERROR CORREGIDO
+- Error visto en frontend:
+  `AdminShipmentDetailFloat.tsx: Cannot access 'q' before initialization`
+- Solucion aplicada: reorden de hooks (declarar `q = useQuery(...)` antes del `useEffect` que lo usa).
+
+3) PAGOS / CONTABILIDAD
+- Regla backend aplicada en `backend/src/routes/payments.ts`:
+  - Si admin registra pago con `shipmentId` y el envio ya esta facturado,
+    se exige `invoiceId`.
+  - Error esperado si no cumple:
+    `INVOICE_REQUIRED_FOR_BILLED_SHIPMENT` (400).
+- UI aplicada en `PagosAdminPage.tsx` para guiar ese caso y bloquear guardado ambiguo.
+
+4) REINICIO DE DATOS (YA HECHO)
+- Ejecutado:
+  - `npm run wipe:demo-operational`
+  - `npm run seed:admin-simulation`
+  - `npm run seed:today`
+
+5) PENDIENTE CLAVE PARA MANANA
+- Definir e implementar automatizacion de facturacion:
+  "cuando cobro se completa -> generar factura"
+- Falta decidir disparador exacto:
+  - al quedar pagado,
+  - al cierre de entrega,
+  - o regla combinada (operativo vs contable).
+
+6) NOTA SOBRE CURSOR / MODELOS
+- Se tocaron docs para configuracion local de Cursor (Blackbox/OpenRouter),
+  solo entorno IDE; no afecta app/SaaS.
+- `settings.json` del usuario se ajusto por error de JSON (comillas/coma).
+
+================================================================================

@@ -1,0 +1,2 @@
+import "./smoke-critical.js";
+

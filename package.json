@@ -1,0 +1,26 @@
+{
+  "name": "transport-pro-spec",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -n api,web -c blue,green \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
+    "dev:api": "npm run dev --prefix backend",
+    "dev:web": "npm run dev --prefix frontend",
+    "simulate:daily": "npm run simulate:daily --prefix backend",
+    "qa:requested-users": "npm run qa:requested-users --prefix backend",
+    "test": "npm run test --prefix backend",
+    "docker:up": "docker compose up --build",
+    "docker:down": "docker compose down",
+    "security:setup": "chmod +x scripts/generate-keys.sh && ./scripts/generate-keys.sh",
+    "security:keys": "./scripts/generate-keys.sh",
+    "security:audit": "cd backend && npm audit && echo '🔍 Security audit completed'",
+    "security:report": "cd backend && node -e \"const { generateSecurityReport } = require('./dist/middleware/securityLogging.js'); console.log(generateSecurityReport());\"",
+    "setup:prod": "npm run security:setup && npm run docker:up",
+    "setup:dev": "cp .env.docker .env.example && echo '📝 Environment template ready'"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  },
+  "dependencies": {
+    "node-fetch": "^3.3.2"
+  }
+}

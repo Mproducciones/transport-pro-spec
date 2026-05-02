@@ -1,0 +1,27 @@
+# Opcional: dispara un redeploy en Render vía Deploy Hook (sin CLI).
+# 1) En Render → tu Web Service → Settings → Deploy Hook → crear hook.
+# 2) En GitHub → Settings → Secrets → Actions → RENDER_DEPLOY_HOOK_URL = URL del hook.
+#
+# Solo se ejecuta manualmente (workflow_dispatch).
+name: Trigger Render API deploy
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  hook:
+    runs-on: ubuntu-latest
+    steps:
+      - name: POST deploy hook
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$HOOK" ]; then
+            echo "Falta el secret RENDER_DEPLOY_HOOK_URL. Creá un Deploy Hook en Render y agregalo en GitHub → Secrets."
+            exit 1
+          fi
+          curl -fsS -X POST "$HOOK"
+          echo "Deploy hook enviado."

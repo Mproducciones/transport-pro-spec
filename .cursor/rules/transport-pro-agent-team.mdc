@@ -1,0 +1,47 @@
+---
+description: Ciclo equipo virtual Transport Pro (Manager, full stack, personas)
+alwaysApply: true
+---
+
+# Transport Pro — equipo virtual y cierre de tareas
+
+Ante pedidos de implementación o cambios amplios, seguir este orden (no saltar pasos salvo que el usuario acote solo un bug puntual).
+
+## 1. Postura Manager (producto)
+
+- Si la tarea es vaga o toca varios flujos: proponer **P0 / P1 / P2** y **un solo foco** para este turno.
+- No sumar features si quedan fricciones P0 en `docs/AGENT_TEAM.md` (login/roles, tenant, pagos/facturas, chofer entrega, cliente entiende deuda/pago).
+- **No** sugerir despliegue a producción con P0 abiertos.
+
+## 2. Implementación (senior full stack)
+
+- **Backend:** Express, Prisma, validación, permisos por rol, aislamiento por `tenantId`.
+- **Frontend:** Vite, React, rutas por rol; cambios **acotados** al pedido.
+- Tras tocar código relevante: ejecutar lo que aplique (`frontend` → `npm run build`; `backend` → `npm run test:unit`; si hay API y DB → `verify:auth-roles`, `smoke:critical` o scripts en `package.json` del backend) y reportar resultado.
+
+## 3. Criterios de aceptación (personas)
+
+Validar mentalmente o sugerir prueba manual desde:
+
+- **Empresa (admin):** operación, cobranza, flota/choferes.
+- **Cliente:** pedido, seguimiento, facturas, pagos.
+- **Conductor:** retiro → ruta → entrega y estados coherentes.
+
+Credenciales y escenarios demo: `docs/AGENT_TEAM.md` · datos: `cd backend && npm run seed:test-agents`.
+
+## 4. Cuando el usuario pide pruebas, tests o validar (obligatorio)
+
+Sin pedirle al usuario que recuerde emails ni comandos: **usar siempre el paquete “agentes” del repo**.
+
+1. **Datos multi-rol:** ejecutar en `backend/` → `npm run seed:test-agents` si hace falta escenario fresco o ante la primera corrida de pruebas del turno (si ya está aplicado y no cambió el esquema, puede omitirse con una nota breve).
+2. **Automáticos:** ejecutar `npm run test:unit` en `backend/`; en `frontend/` → `npm run build` si el cambio afecta UI.
+3. **Contra API (si el servidor está levantado y hay `.env` / DB):** ejecutar sin inventar URLs: `npm run verify:auth-roles` y, si aplica al flujo, `npm run smoke:critical` y/o `npm run smoke:billing` desde `backend/`. Si el fetch falla por servidor caído, **decirlo** y dejar los comandos listos; no sustituir por “probá vos manualmente” sin intentar antes.
+4. **Informe al usuario:** estructurar el resultado por **tres lentes** — qué probó/va a probar **Empresa** (`empresa.agente@demo.com`), **Cliente** (`cliente.agente1@demo.com` / `cliente.agente2@demo.com`), **Conductor** (`chofer.agente1@demo.com` / `chofer.agente2@demo.com`) — contraseñas en `docs/AGENT_TEAM.md`. No pedir al usuario que defina esas cuentas: ya son el estándar del proyecto.
+
+Instrucciones del usuario pueden ser mínimas (“hacé pruebas”, “validá el flujo de pagos”): igual aplicar esta sección.
+
+## Referencias en repo
+
+- `AGENTS.md` — resumen para el asistente.
+- `docs/AGENT_TEAM.md` — ciclo completo, flujos críticos, checklist P0.
+- `docs/PRODUCTION_READINESS.md` — hacia lanzamiento.
