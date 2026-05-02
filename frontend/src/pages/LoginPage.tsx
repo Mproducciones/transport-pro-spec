@@ -48,10 +48,7 @@ export function LoginPage() {
           </span>
           <span className="font-semibold">Transport Pro</span>
         </div>
-        <Link to="/registro" className="text-sm text-blue-300 hover:text-blue-200">
-          Registrar empresa
-        </Link>
-      </header>
+              </header>
 
       <div className="mx-auto grid max-w-5xl gap-8 p-6 md:grid-cols-2 md:p-10">
         <div className="hidden rounded-2xl bg-gradient-to-br from-blue-700 to-slate-800 p-8 md:flex md:flex-col md:justify-between">
