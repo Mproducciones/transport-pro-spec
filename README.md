@@ -1,16 +1,71 @@
-# Transport Pro — Stack local completo
+# 🚛 Transport Pro Spec
 
-Monorepo: **PostgreSQL** + **Node.js (Express, Prisma)** + **React (Vite, Tailwind CSS)**. Incluye RBAC por rol, consola de plataforma (SuperAdmin / Owner), multi-tenant y módulos operativos (envíos, flota, facturación, pagos, etc.) según `SPEC.md`.
+> **Multi-tenant Transportation Management System** with real-time tracking, role-based access control, and comprehensive fleet management.
 
-## Arquitectura
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node.js Version](https://img.shields.io/badge/node-%3E%3D20.0.0-brightgreen)](https://nodejs.org/)
+[![React](https://img.shields.io/badge/react-19.0.0-blue)](https://reactjs.org/)
+[![TypeScript](https://img.shields.io/badge/typescript-5.0-blue)](https://www.typescriptlang.org/)
+[![PostgreSQL](https://img.shields.io/badge/postgresql-16+-blue)](https://www.postgresql.org/)
 
-| Capa        | Tecnología |
+A comprehensive transportation management platform built with modern web technologies. Features multi-tenant architecture, real-time shipment tracking, driver management, customer portals, and complete billing systems.
+
+## ✨ Key Features
+
+- 🏢 **Multi-tenant Architecture** - Complete data isolation per company
+- 👥 **Role-Based Access Control** - Admin, Customer, Driver roles
+- 📱 **Responsive Design** - Works on desktop, tablet, and mobile
+- 🚛 **Fleet Management** - Driver and vehicle tracking
+- 📦 **Shipment Tracking** - Real-time order monitoring
+- 💰 **Billing System** - Invoices, payments, and settlements
+- 🗺️ **Route Management** - Optimized delivery routes
+- 📊 **Analytics Dashboard** - KPIs and business insights
+- 🔐 **JWT Authentication** - Secure user management
+- 🌐 **Modern Tech Stack** - React, Node.js, PostgreSQL, Prisma
+
+## 🏗️ Architecture
+
+| Layer      | Technology |
 |------------|------------|
 | Frontend   | React 19, Vite 6, Tailwind 4, React Router, TanStack Query |
 | Backend    | Node 22, Express 4, Zod, JWT, Prisma ORM |
-| Base datos | PostgreSQL 16 |
-| Tests API  | Jest 29 + ts-jest (ESM) |
-| Contenedores | Docker Compose (Postgres + API + Nginx) |
+| Database   | PostgreSQL 16 |
+| Testing    | Jest 29 + ts-jest (ESM) |
+| Deployment | Docker Compose, Vercel, Railway |
+
+## 🚀 Quick Start
+
+### 🎯 Try the Demo
+
+**Live Demo:** [Coming Soon]  
+**Admin Panel:** [Coming Soon]  
+**Customer Portal:** [Coming Soon]
+
+### 📱 Screenshots
+
+*Add screenshots of your application here*
+
+```bash
+# Clone the repository
+git clone https://github.com/bryan-dev/transport-pro-spec.git
+cd transport-pro-spec
+
+# Install dependencies
+npm install
+
+# Setup environment variables
+cp backend/.env.example backend/.env
+
+# Start development servers
+npm run dev
+```
+
+**Access URLs:**
+- 🌐 **Frontend:** http://localhost:5173
+- 🛠️ **Admin Panel:** http://localhost:5173/admin
+- 👥 **Customer Portal:** http://localhost:5173/cliente
+- 🚛 **Driver App:** http://localhost:5173/conductor
+- 📡 **API:** http://localhost:4000
 
 ## Roles de usuario
 
@@ -111,44 +166,110 @@ La API ejecuta `prisma migrate deploy` al iniciar el contenedor.
 
 **SuperAdmin local (Docker):** abrí http://localhost:8080/owner e ingresá la clave configurada en `OWNER_API_KEY` del servicio `api` (por defecto en compose: `docker-local-owner-api-key-32-chars-min`).
 
-## Credenciales demo (tras `db:seed`)
+## 🔐 Demo Credentials
 
-| Rol       | Email                 | Contraseña      |
-|-----------|----------------------|-----------------|
-| Admin     | `admin@demo.com`     | `Admin123!`     |
-| Cliente   | `cliente@demo.com`   | `Cliente123!`   |
-| Conductor | `conductor@demo.com` | `Conductor123!` |
+After running the database seed, use these credentials to explore the system:
 
-También podés registrar una empresa nueva en `/registro`.
+| Role       | Email                 | Password        | Access URL |
+|-----------|----------------------|-----------------|-----------|
+| 🛠️ **Admin**     | `admin@demo.com`     | `Admin123!`     | `/admin` |
+| 👥 **Customer**   | `cliente@demo.com`   | `Cliente123!`   | `/cliente` |
+| 🚛 **Driver**     | `conductor@demo.com` | `Conductor123!` | `/conductor` |
 
-## Estructura del repositorio
+### 🎯 Quick Database Setup
 
-```
-backend/          # Express + Prisma + Jest
-  prisma/         # schema, migraciones, seed
-  src/            # rutas, servicios, middleware
-  tests/          # *.test.ts (Jest)
-  Dockerfile
-frontend/         # Vite + React + Tailwind
-  Dockerfile
-  nginx.conf      # proxy /api → API (solo imagen Docker)
-docker-compose.yml
+```bash
+# Reset and populate database with demo data
+cd backend
+node simple-test-orders.cjs
+
+# Or use the complete orders system
+node create-complete-orders.cjs
 ```
 
-## Scripts útiles
+## 📁 Project Structure
 
-| Comando | Descripción |
+```
+transport-pro-spec/
+├── 📂 backend/                 # Node.js API + Prisma
+│   ├── 📂 src/                 # Source code
+│   ├── 📂 prisma/              # Database schema & migrations
+│   ├── 📂 tests/               # API tests
+│   └── 📄 package.json
+├── 📂 frontend/                # React + TypeScript
+│   ├── 📂 src/                 # React components
+│   ├── 📂 public/              # Static assets
+│   └── 📄 package.json
+├── 📂 scripts/                 # Utility scripts
+├── 📄 docker-compose.yml       # Docker configuration
+├── 📄 README.md                # This file
+└── 📄 SPEC.md                  # Project specifications
+```
+
+## 🛠️ Development Commands
+
+| Command | Description |
 |---------|-------------|
-| `npm run dev` (raíz) | API + Vite en paralelo |
-| `cd backend && npm test` | Jest |
-| `cd backend && npm run db:migrate` | Migraciones desarrollo |
-| `cd backend && npm run db:seed` | Seed Prisma |
-| `docker compose up --build` | Stack completo |
+| `npm run dev` | Start API + Frontend in parallel |
+| `cd backend && npm test` | Run Jest tests |
+| `cd backend && npm run db:migrate` | Run database migrations |
+| `cd backend && npm run db:seed` | Populate database with demo data |
+| `docker compose up --build` | Start full stack with Docker |
 
-Piloto online (Neon + Render + Vercel) y **GitHub Actions** (CI + deploy frontend): [`docs/DEPLOY_FREE_STACK.md`](docs/DEPLOY_FREE_STACK.md).
+## 🐳 Docker Deployment
 
-## Notas
+Complete stack with PostgreSQL, API, and Nginx:
 
-- En producción, `JWT_SECRET` y `OWNER_API_KEY` deben tener al menos **32 caracteres** y no usar valores de demo (`backend/src/config.ts`).
-- Mercado Pago y correo (Resend) son opcionales; ver `backend/.env.example`.
-- Documentación de producto y revisiones: `SPEC.md`, `docs/`.
+```bash
+docker compose up --build
+```
+
+**Services:**
+- 🌐 **Web App:** http://localhost:8080
+- 📡 **API:** http://localhost:4000
+- 🗄️ **PostgreSQL:** localhost:5432
+
+## 🚀 Production Deployment
+
+### Free Stack Options:
+- **Database:** [Neon](https://neon.tech/) (PostgreSQL)
+- **Backend:** [Railway](https://railway.app/) (Node.js)
+- **Frontend:** [Vercel](https://vercel.com/) (React)
+- **CI/CD:** GitHub Actions
+
+See [`docs/DEPLOY_FREE_STACK.md`](docs/DEPLOY_FREE_STACK.md) for detailed deployment guide.
+
+## ⚙️ Configuration
+
+**Environment Variables** (backend/.env):
+
+```env
+DATABASE_URL="postgresql://user:pass@localhost:5432/transport_pro"
+JWT_SECRET="minimum-32-characters-in-production"
+OWNER_API_KEY="minimum-32-characters-in-production"
+PORT=4000
+FRONTEND_URL="http://localhost:5173"
+CORS_ORIGINS="http://localhost:5173"
+```
+
+## 📝 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## 📞 Support
+
+- 📧 **Email:** support@transport-pro.com
+- 📖 **Documentation:** Check `SPEC.md` and `docs/` folder
+- 🐛 **Issues:** [GitHub Issues](https://github.com/bryan-dev/transport-pro-spec/issues)
+
+---
+
+**Built with ❤️ for the transportation industry** 🚛✨
